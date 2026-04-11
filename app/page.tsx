@@ -1,29 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  animate,
   motion,
-  useMotionValue,
   useScroll,
   useTransform
 } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
-  Car,
-  Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Gauge,
   MapPin,
   MessageCircle,
   Phone,
   ShieldCheck,
   Sparkles,
   Truck,
-  Wrench,
   Zap
 } from "lucide-react";
 
@@ -37,20 +31,6 @@ const truckImage =
   "https://images.unsplash.com/photo-1730514785075-b065c757b653?auto=format&fit=crop&fm=webp&q=72&w=1600";
 const fleetImage =
   "https://images.unsplash.com/photo-1686966933735-305bd8fe0a77?auto=format&fit=crop&fm=webp&q=76&w=1400";
-
-const vehicleTypes = [
-  { id: "car", label: "Легковой", icon: Car, base: 2500 },
-  { id: "suv", label: "Джип", icon: ShieldCheck, base: 2500 },
-  { id: "moto", label: "Мото", icon: Gauge, base: 2000 },
-  { id: "van", label: "Коммерческий", icon: Truck, base: 3000 },
-  { id: "spec", label: "Спецтехника", icon: Wrench, base: 3500 }
-];
-
-const damageOptions = [
-  { id: "locked", label: "Колеса заблокированы", price: 450 },
-  { id: "low", label: "Низкий клиренс", price: 550 },
-  { id: "ditch", label: "Нужна сложная погрузка", price: 900 }
-];
 
 const benefits = [
   {
@@ -92,7 +72,28 @@ const prices = [
     title: "Спецтехника",
     price: "от 3 500 ₽",
     text: "Погрузчики, мини-техника, коммерческий транспорт",
-    items: ["Индивидуальный расчет", "Маршрут по ДНР", "Согласование времени"]
+    items: ["Цена по маршруту", "Маршрут по ДНР", "Согласование времени"]
+  }
+];
+
+const trustMetrics = [
+  { value: "2", label: "свободных эвакуатора" },
+  { value: "18", label: "минут средняя подача" },
+  { value: "24/7", label: "выезд без выходных" }
+];
+
+const servicePromises = [
+  {
+    title: "Цена до выезда",
+    text: "Диспетчер называет стоимость до подачи, чтобы решение было понятным сразу."
+  },
+  {
+    title: "Без лишних форм",
+    text: "Не нужно вводить номер на сайте. Один клик: звонок или WhatsApp."
+  },
+  {
+    title: "Аккуратная фиксация",
+    text: "Автомобиль крепится на платформе перед дорогой, водитель держит связь."
   }
 ];
 
@@ -150,42 +151,6 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 }
 };
 
-function currency(value: number) {
-  return `${Math.round(value).toLocaleString("ru-RU")} ₽`;
-}
-
-function CountUp({
-  value,
-  formatter = (next: number) => Math.round(next).toLocaleString("ru-RU")
-}: {
-  value: number;
-  formatter?: (next: number) => string;
-}) {
-  const nodeRef = useRef<HTMLSpanElement>(null);
-  const motionValue = useMotionValue(value);
-
-  useEffect(() => {
-    const controls = animate(motionValue, value, {
-      duration: 0.55,
-      ease: [0.22, 1, 0.36, 1]
-    });
-
-    return controls.stop;
-  }, [motionValue, value]);
-
-  useEffect(() => {
-    const unsubscribe = motionValue.on("change", (latest) => {
-      if (nodeRef.current) {
-        nodeRef.current.textContent = formatter(latest);
-      }
-    });
-
-    return unsubscribe;
-  }, [formatter, motionValue]);
-
-  return <span ref={nodeRef}>{formatter(value)}</span>;
-}
-
 function Reveal({
   children,
   className = "",
@@ -210,28 +175,11 @@ function Reveal({
 }
 
 export default function Home() {
-  const [vehicle, setVehicle] = useState(vehicleTypes[0].id);
-  const [distance, setDistance] = useState(12);
-  const [damages, setDamages] = useState<string[]>(["low"]);
   const [activeReview, setActiveReview] = useState(0);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 700], [0, 150]);
   const heroScale = useTransform(scrollY, [0, 700], [1.02, 1.12]);
   const routeProgress = useTransform(scrollY, [1850, 2850], ["0%", "100%"]);
-
-  const selectedVehicle = useMemo(
-    () => vehicleTypes.find((item) => item.id === vehicle) ?? vehicleTypes[0],
-    [vehicle]
-  );
-
-  const estimate = useMemo(() => {
-    const damagePrice = damages.reduce((sum, id) => {
-      const option = damageOptions.find((item) => item.id === id);
-      return sum + (option?.price ?? 0);
-    }, 0);
-
-    return Math.round((selectedVehicle.base + distance * 42 + damagePrice) / 50) * 50;
-  }, [damages, distance, selectedVehicle.base]);
 
   const faqSchema = {
     "@context": "https://schema.org",
@@ -255,7 +203,7 @@ export default function Home() {
     priceRange: "от 2500 ₽",
     openingHours: "Mo-Su 00:00-23:59",
     description:
-      "Эвакуатор в Донецке и по ДНР. Быстрая подача, аккуратная погрузка, расчет стоимости онлайн."
+      "Эвакуатор в Донецке и по ДНР. Быстрая подача, аккуратная погрузка, прозрачная цена до выезда."
   };
 
   useEffect(() => {
@@ -265,12 +213,6 @@ export default function Home() {
 
     return () => window.clearInterval(timer);
   }, []);
-
-  const toggleDamage = (id: string) => {
-    setDamages((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-    );
-  };
 
   const activeReviewItem = reviews[activeReview];
 
@@ -299,8 +241,8 @@ export default function Home() {
           </a>
 
           <nav className="hidden items-center gap-6 text-sm text-white/68 lg:flex">
-            <a className="transition hover:text-white" href="#calculator">
-              Расчет
+            <a className="transition hover:text-white" href="#service">
+              Условия
             </a>
             <a className="transition hover:text-white" href="#coverage">
               Карта
@@ -366,18 +308,18 @@ export default function Home() {
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a
-                href="#calculator"
+                href={phoneHref}
                 className="glow-button inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--orange)] px-6 py-4 text-base font-semibold text-[#090909]"
               >
-                Рассчитать стоимость
-                <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                Вызвать эвакуатор
+                <Phone className="h-5 w-5" aria-hidden="true" />
               </a>
               <a
-                href={phoneHref}
+                href="#prices"
                 className="glow-button inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.55)] bg-[rgba(97,240,255,0.16)] px-6 py-4 text-base font-semibold text-white shadow-[0_0_26px_rgba(97,240,255,0.24)] backdrop-blur-xl transition hover:border-[rgba(97,240,255,0.9)] hover:bg-[rgba(97,240,255,0.22)]"
               >
-                <Phone className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
-                Позвонить сейчас
+                <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
+                Смотреть цены
               </a>
             </div>
           </motion.div>
@@ -436,143 +378,76 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="calculator" className="relative py-20 sm:py-24">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.82fr_1.18fr] lg:px-8">
+      <section id="service" className="relative py-20 sm:py-24">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:px-8">
           <Reveal>
             <div className="sticky top-24">
-              <p className="mb-3 text-sm font-semibold text-[var(--orange)]">Smart-расчет</p>
+              <p className="mb-3 text-sm font-semibold text-[var(--orange)]">Прозрачные условия</p>
               <h2 className="text-balance text-4xl font-semibold leading-tight sm:text-5xl">
-                Цена понятна до подачи эвакуатора
+                Стоимость называют до выезда
               </h2>
               <p className="mt-5 max-w-xl text-lg leading-8 text-white/62">
-                Укажите тип транспорта, расстояние и повреждения. Калькулятор сразу покажет
-                ориентир, а диспетчер закрепит итоговую стоимость перед выездом.
+                Клиент сразу звонит или пишет в WhatsApp, а диспетчер уточняет маршрут, состояние
+                авто и фиксирует цену до подачи.
               </p>
               <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg border border-white/12 bg-white/7 p-4">
-                  <span className="block text-3xl font-semibold text-[var(--lime)]">2</span>
-                  <span className="mt-1 block text-white/58">свободных эвакуатора</span>
-                </div>
-                <div className="rounded-lg border border-white/12 bg-white/7 p-4">
-                  <span className="block text-3xl font-semibold text-[var(--cyan)]">18</span>
-                  <span className="mt-1 block text-white/58">минут средняя подача</span>
-                </div>
+                {trustMetrics.map((item) => (
+                  <div key={item.label} className="rounded-lg border border-white/12 bg-white/7 p-4">
+                    <span className="block text-3xl font-semibold text-[var(--lime)]">{item.value}</span>
+                    <span className="mt-1 block text-white/58">{item.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </Reveal>
 
           <Reveal delay={0.08}>
             <div className="glass rounded-lg p-4 sm:p-6">
-              <div className="grid gap-6">
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-4">
-                    <h3 className="text-xl font-semibold">Тип авто</h3>
-                    <span className="text-sm text-white/48">иконки помогают выбрать быстрее</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    {vehicleTypes.map((item) => {
-                      const Icon = item.icon;
-                      const isActive = item.id === vehicle;
-
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setVehicle(item.id)}
-                          className={`rounded-lg border p-4 text-left transition ${
-                            isActive
-                              ? "border-[var(--orange)] bg-[rgba(255,106,26,0.15)] text-white shadow-[0_18px_45px_rgba(255,106,26,0.16)]"
-                              : "border-white/12 bg-black/20 text-white/68 hover:border-white/30 hover:bg-white/10"
-                          }`}
-                        >
-                          <Icon className="mb-4 h-6 w-6" aria-hidden="true" />
-                          <span className="block text-sm font-semibold">{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/24 p-6 sm:p-8">
+                <div className="grid gap-5 md:grid-cols-3">
+                  {servicePromises.map((item, index) => (
+                    <article
+                      key={item.title}
+                      className="rounded-lg border border-white/12 bg-white/7 p-5"
+                    >
+                      <span className="grid h-10 w-10 place-items-center rounded-lg bg-[var(--orange)] text-base font-semibold text-[#090909]">
+                        {index + 1}
+                      </span>
+                      <h3 className="mt-5 text-xl font-semibold">{item.title}</h3>
+                      <p className="mt-3 text-sm leading-6 text-white/58">{item.text}</p>
+                    </article>
+                  ))}
                 </div>
-
-                <div className="rounded-lg border border-white/12 bg-black/24 p-5">
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-semibold">Расстояние</h3>
-                      <p className="mt-1 text-sm text-white/52">Маршрут по Донецку или ДНР</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="block text-3xl font-semibold text-white">{distance} км</span>
-                      <span className="text-sm text-white/48">примерно</span>
-                    </div>
-                  </div>
-                  <input
-                    type="range"
-                    min="3"
-                    max="120"
-                    value={distance}
-                    onChange={(event) => setDistance(Number(event.target.value))}
-                    className="mt-6 h-2 w-full accent-[var(--orange)]"
-                    aria-label="Расстояние перевозки"
-                  />
-                  <div className="mt-3 flex justify-between text-xs text-white/42">
-                    <span>3 км</span>
-                    <span>120 км</span>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="mb-3 text-xl font-semibold">Повреждения</h3>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {damageOptions.map((item) => {
-                      const isActive = damages.includes(item.id);
-
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => toggleDamage(item.id)}
-                          className={`flex min-h-24 items-start gap-3 rounded-lg border p-4 text-left transition ${
-                            isActive
-                              ? "border-[rgba(184,255,90,0.46)] bg-[rgba(184,255,90,0.1)]"
-                              : "border-white/12 bg-black/20 hover:border-white/30"
-                          }`}
-                        >
-                          <span
-                            className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded border ${
-                              isActive
-                                ? "border-[var(--lime)] bg-[var(--lime)] text-[#090909]"
-                                : "border-white/24"
-                            }`}
-                          >
-                            {isActive ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : null}
-                          </span>
-                          <span>
-                            <span className="block font-semibold">{item.label}</span>
-                            <span className="mt-1 block text-sm text-white/48">+ {currency(item.price)}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-[rgba(255,106,26,0.35)] bg-[linear-gradient(135deg,rgba(255,106,26,0.16),rgba(255,255,255,0.06))] p-5 sm:p-6">
-                  <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
-                    <div>
-                      <p className="text-sm text-white/58">Примерная стоимость</p>
-                      <div className="mt-2 text-5xl font-semibold text-white sm:text-6xl">
-                        <CountUp value={estimate} formatter={currency} />
+                <div className="mt-6 rounded-lg border border-[rgba(255,106,26,0.35)] bg-[linear-gradient(135deg,rgba(255,106,26,0.16),rgba(255,255,255,0.06))] p-5 sm:p-6">
+                  <p className="text-sm font-semibold text-[var(--orange)]">Базовые цены</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    {prices.map((item) => (
+                      <div key={item.title} className="rounded-lg border border-white/12 bg-black/20 p-4">
+                        <span className="block text-sm text-white/52">{item.title}</span>
+                        <span className="mt-2 block text-3xl font-semibold text-white">{item.price}</span>
                       </div>
-                      <p className="mt-3 max-w-2xl text-sm leading-6 text-white/56">
-                        Финальная цена подтверждается до выезда. Без скрытых доплат за ночное время
-                        в пределах согласованного маршрута.
-                      </p>
-                    </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-white/56">
+                    Итоговая цена зависит от маршрута и состояния автомобиля, но согласуется до
+                    выезда эвакуатора.
+                  </p>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
                     <a
                       href={phoneHref}
                       className="glow-button inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--orange)] px-6 py-4 font-semibold text-[#090909]"
                     >
-                      Вызвать за 1 клик
+                      Позвонить диспетчеру
                       <Phone className="h-5 w-5" aria-hidden="true" />
+                    </a>
+                    <a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(184,255,90,0.5)] bg-[rgba(184,255,90,0.12)] px-6 py-4 font-semibold text-white transition hover:border-[var(--lime)] hover:bg-[rgba(184,255,90,0.18)]"
+                    >
+                      Написать в WhatsApp
+                      <MessageCircle className="h-5 w-5 text-[var(--lime)]" aria-hidden="true" />
                     </a>
                   </div>
                 </div>
@@ -682,7 +557,7 @@ export default function Home() {
               </h2>
             </div>
             <p className="max-w-md leading-7 text-white/58">
-              Услуга рассчитывается прозрачно: тип транспорта, расстояние и состояние автомобиля.
+              Стоимость формируется прозрачно: тип транспорта, расстояние и состояние автомобиля.
             </p>
           </Reveal>
 
@@ -711,11 +586,11 @@ export default function Home() {
                     ))}
                   </ul>
                   <a
-                    href="#calculator"
+                    href={phoneHref}
                     className="mt-8 inline-flex items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/24 px-4 py-3 font-semibold transition group-hover:border-[var(--orange)]"
                   >
-                    Посчитать мой маршрут
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    Вызвать эвакуатор
+                    <Phone className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </motion.article>
               </Reveal>
@@ -956,8 +831,8 @@ export default function Home() {
           </div>
           <div className="space-y-3">
             <p className="font-semibold text-white">Быстрые ссылки</p>
-            <a className="block transition hover:text-white" href="#calculator">
-              Рассчитать стоимость
+            <a className="block transition hover:text-white" href={phoneHref}>
+              Вызвать эвакуатор
             </a>
             <a className="block transition hover:text-white" href="#prices">
               Цены
