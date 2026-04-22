@@ -20,17 +20,16 @@ import {
   Truck,
   Zap
 } from "lucide-react";
+import HeroScene from "./components/HeroScene";
 
 const phoneDisplay = "+7 (949) 000-15-15";
 const phoneHref = "tel:+79490001515";
 const whatsappHref = "https://wa.me/79490001515";
-
-const heroImage =
-  "https://images.pexels.com/photos/17429097/pexels-photo-17429097.jpeg?auto=compress&cs=tinysrgb&w=2400";
 const truckImage =
   "https://images.unsplash.com/photo-1730514785075-b065c757b653?auto=format&fit=crop&fm=webp&q=72&w=1600";
 const fleetImage =
   "https://images.unsplash.com/photo-1686966933735-305bd8fe0a77?auto=format&fit=crop&fm=webp&q=76&w=1400";
+const nearestDistanceKm = 4.8;
 
 const benefits = [
   {
@@ -78,7 +77,7 @@ const prices = [
 
 const trustMetrics = [
   { value: "2", label: "свободных эвакуатора" },
-  { value: "18", label: "минут средняя подача" },
+  { value: "18 мин", label: "средняя подача" },
   { value: "24/7", label: "выезд без выходных" }
 ];
 
@@ -127,7 +126,7 @@ const faq = [
   {
     question: "Сколько стоит вызвать эвакуатор в Донецке?",
     answer:
-      "Базовая стоимость начинается от 2 500 ₽. Итог зависит от типа авто, расстояния, состояния колес и сложности погрузки."
+      "Базовая стоимость начинается от 2 500 ₽. Точную итоговую цену оператор согласует в звонке до выезда, а водитель на месте объяснит детали погрузки и маршрута."
   },
   {
     question: "Как быстро приезжает эвакуатор?",
@@ -171,6 +170,42 @@ function Reveal({
     >
       {children}
     </motion.div>
+  );
+}
+
+function DistanceCounter({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value + 2.4);
+
+  useEffect(() => {
+    let frame = 0;
+    const startValue = value + 2.4;
+    const startedAt = performance.now();
+    const duration = 1400;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = startValue + (value - startValue) * eased;
+      setDisplay(next);
+
+      if (progress < 1) {
+        frame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frame = window.requestAnimationFrame(tick);
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [value]);
+
+  return (
+    <span>
+      {display.toLocaleString("ru-RU", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      })}
+      <span className="ml-2 text-lg font-medium text-white/54">км</span>
+    </span>
   );
 }
 
@@ -272,16 +307,12 @@ export default function Home() {
       </header>
 
       <section id="top" className="relative min-h-[88svh] overflow-hidden pt-16">
-        <motion.img
-          src={heroImage}
-          alt="Эвакуатор ночью в городе"
-          fetchPriority="high"
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ y: heroY, scale: heroScale }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#090909] via-[#090909]/72 to-[#090909]/18" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#090909] via-[#090909]/20 to-[#090909]/30" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,106,26,0.12),transparent_38%,rgba(97,240,255,0.08))]" />
+        <motion.div className="absolute inset-0" style={{ y: heroY, scale: heroScale }}>
+          <HeroScene />
+        </motion.div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#090909] via-[#090909]/58 to-[#090909]/14" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#090909] via-[#090909]/22 to-[#090909]/38" />
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,106,26,0.14),transparent_36%,rgba(97,240,255,0.1))]" />
         <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#090909] to-transparent" />
 
         <div className="relative mx-auto grid min-h-[calc(88svh-4rem)] max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.08fr_0.72fr] lg:px-8">
@@ -322,6 +353,35 @@ export default function Home() {
                 Смотреть цены
               </a>
             </div>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              {[
+                {
+                  icon: MapPin,
+                  text: `Ближайший эвакуатор уже в ${nearestDistanceKm.toLocaleString("ru-RU", {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1
+                  })} км`
+                },
+                { icon: ShieldCheck, text: "Финальная цена согласуется до выезда" },
+                { icon: MessageCircle, text: "Маршрут можно отправить в WhatsApp" }
+              ].map((item, index) => {
+                const Icon = item.icon;
+
+                return (
+                  <motion.div
+                    key={item.text}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.26 + index * 0.08, duration: 0.5 }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-white/12 bg-black/32 px-4 py-3 text-sm text-white/72 backdrop-blur-xl"
+                  >
+                    <Icon className="h-4 w-4 text-[var(--cyan)]" aria-hidden="true" />
+                    <span>{item.text}</span>
+                  </motion.div>
+                );
+              })}
+            </div>
           </motion.div>
 
           <motion.aside
@@ -342,7 +402,9 @@ export default function Home() {
               <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
                 <div>
                   <p className="text-sm text-white/62">Ближайший экипаж</p>
-                  <p className="text-2xl font-semibold">4,8 км</p>
+                  <p className="text-3xl font-semibold text-white">
+                    <DistanceCounter value={nearestDistanceKm} />
+                  </p>
                 </div>
                 <span className="rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]">
                   На линии
@@ -352,6 +414,32 @@ export default function Home() {
 
             <div className="mt-4 space-y-3">
               <p className="block text-sm text-white/68">Быстрый вызов</p>
+              <div className="grid grid-cols-[1fr_auto] items-end gap-4 rounded-lg border border-white/12 bg-black/24 p-4">
+                <div>
+                  <p className="text-xs uppercase text-white/42">Диспетчерский маршрут</p>
+                  <p className="mt-2 text-4xl font-semibold text-white">
+                    <DistanceCounter value={nearestDistanceKm} />
+                  </p>
+                  <p className="mt-2 text-sm text-white/56">до ближайшего свободного эвакуатора</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <motion.span
+                      key={index}
+                      className="h-2.5 w-14 rounded bg-[linear-gradient(90deg,rgba(255,106,26,0.95),rgba(97,240,255,0.92))]"
+                      animate={{
+                        opacity: [0.35, 1, 0.35],
+                        scaleX: [0.72, 1, 0.78]
+                      }}
+                      transition={{
+                        duration: 1.25,
+                        repeat: Infinity,
+                        delay: index * 0.08
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <a
                   href={phoneHref}
@@ -371,7 +459,8 @@ export default function Home() {
                 </a>
               </div>
               <p className="text-xs leading-5 text-white/48">
-                Нажмите кнопку, диспетчер уточнит адрес, состояние авто и назовет точную цену до подачи.
+                Оператор уточнит адрес и состояние авто, после чего назовет итоговую цену до
+                выезда. Водитель на подаче дополнительно объяснит погрузку, маршрут и фиксацию.
               </p>
             </div>
           </motion.aside>
@@ -390,7 +479,7 @@ export default function Home() {
                 Клиент сразу звонит или пишет в WhatsApp, а диспетчер уточняет маршрут, состояние
                 авто и фиксирует цену до подачи.
               </p>
-              <div className="mt-8 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
                 {trustMetrics.map((item) => (
                   <div key={item.label} className="rounded-lg border border-white/12 bg-white/7 p-4">
                     <span className="block text-3xl font-semibold text-[var(--lime)]">{item.value}</span>
@@ -432,6 +521,13 @@ export default function Home() {
                     Итоговая цена зависит от маршрута и состояния автомобиля, но согласуется до
                     выезда эвакуатора.
                   </p>
+                  <div className="mt-5 rounded-lg border border-[rgba(97,240,255,0.22)] bg-[rgba(97,240,255,0.08)] p-4">
+                    <p className="text-sm leading-6 text-white/72">
+                      Финальная итоговая цена подтверждается в разговоре с оператором до выезда.
+                      Водитель на месте спокойно объяснит погрузку, крепление и маршрут, чтобы вся
+                      сумма была понятна заранее и без неприятных сюрпризов.
+                    </p>
+                  </div>
                   <div className="mt-6 grid gap-3 sm:grid-cols-2">
                     <a
                       href={phoneHref}
