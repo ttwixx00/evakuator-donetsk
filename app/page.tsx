@@ -13,23 +13,20 @@ import {
   ChevronRight,
   Clock3,
   MapPin,
-  MessageCircle,
   Phone,
   ShieldCheck,
   Sparkles,
   Truck,
   Zap
 } from "lucide-react";
-import HeroScene from "./components/HeroScene";
 
 const phoneDisplay = "+7 (949) 000-15-15";
 const phoneHref = "tel:+79490001515";
-const whatsappHref = "https://wa.me/79490001515";
 const truckImage =
   "https://images.unsplash.com/photo-1730514785075-b065c757b653?auto=format&fit=crop&fm=webp&q=72&w=1600";
 const fleetImage =
   "https://images.unsplash.com/photo-1686966933735-305bd8fe0a77?auto=format&fit=crop&fm=webp&q=76&w=1400";
-const nearestDistanceKm = 4.8;
+const nearestDistanceKm = 2;
 
 const benefits = [
   {
@@ -88,7 +85,7 @@ const servicePromises = [
   },
   {
     title: "Без лишних форм",
-    text: "Не нужно вводить номер на сайте. Один клик: звонок или WhatsApp."
+    text: "Никаких форм и ввода номера. Один клик, и диспетчер уже на связи."
   },
   {
     title: "Аккуратная фиксация",
@@ -201,8 +198,8 @@ function DistanceCounter({ value }: { value: number }) {
   return (
     <span>
       {display.toLocaleString("ru-RU", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1
+        minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
+        maximumFractionDigits: Number.isInteger(value) ? 0 : 1
       })}
       <span className="ml-2 text-lg font-medium text-white/54">км</span>
     </span>
@@ -212,8 +209,6 @@ function DistanceCounter({ value }: { value: number }) {
 export default function Home() {
   const [activeReview, setActiveReview] = useState(0);
   const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, 700], [0, 150]);
-  const heroScale = useTransform(scrollY, [0, 700], [1.02, 1.12]);
   const routeProgress = useTransform(scrollY, [1850, 2850], ["0%", "100%"]);
 
   const faqSchema = {
@@ -307,12 +302,17 @@ export default function Home() {
       </header>
 
       <section id="top" className="relative min-h-[88svh] overflow-hidden pt-16">
-        <motion.div className="absolute inset-0" style={{ y: heroY, scale: heroScale }}>
-          <HeroScene />
-        </motion.div>
-        <div className="absolute inset-0 bg-gradient-to-r from-[#090909] via-[#090909]/58 to-[#090909]/14" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#090909] via-[#090909]/22 to-[#090909]/38" />
-        <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,106,26,0.14),transparent_36%,rgba(97,240,255,0.1))]" />
+        <div className="absolute inset-0">
+          <img
+            src={truckImage}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover object-center opacity-54"
+          />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#090909] via-[#090909]/72 to-[#090909]/22" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#090909] via-[#090909]/28 to-[#090909]/32" />
+        <div className="absolute inset-0 bg-[linear-gradient(118deg,rgba(255,106,26,0.18),transparent_32%,rgba(97,240,255,0.08))]" />
         <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-[#090909] to-transparent" />
 
         <div className="relative mx-auto grid min-h-[calc(88svh-4rem)] max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.08fr_0.72fr] lg:px-8">
@@ -337,17 +337,17 @@ export default function Home() {
               Приедем быстро. Заберем аккуратно. Доставим безопасно.
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <a
                 href={phoneHref}
-                className="glow-button inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--orange)] px-6 py-4 text-base font-semibold text-[#090909]"
+                className="glow-button inline-flex w-full max-w-full items-center justify-center gap-2 rounded-lg bg-[var(--orange)] px-5 py-4 text-base font-semibold text-[#090909] sm:w-auto sm:px-6"
               >
                 Вызвать эвакуатор
                 <Phone className="h-5 w-5" aria-hidden="true" />
               </a>
               <a
                 href="#prices"
-                className="glow-button inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.55)] bg-[rgba(97,240,255,0.16)] px-6 py-4 text-base font-semibold text-white shadow-[0_0_26px_rgba(97,240,255,0.24)] backdrop-blur-xl transition hover:border-[rgba(97,240,255,0.9)] hover:bg-[rgba(97,240,255,0.22)]"
+                className="glow-button inline-flex w-full max-w-full items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.55)] bg-[rgba(97,240,255,0.16)] px-5 py-4 text-base font-semibold text-white shadow-[0_0_26px_rgba(97,240,255,0.24)] backdrop-blur-xl transition hover:border-[rgba(97,240,255,0.9)] hover:bg-[rgba(97,240,255,0.22)] sm:w-auto sm:px-6"
               >
                 <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
                 Смотреть цены
@@ -358,13 +358,10 @@ export default function Home() {
               {[
                 {
                   icon: MapPin,
-                  text: `Ближайший эвакуатор уже в ${nearestDistanceKm.toLocaleString("ru-RU", {
-                    minimumFractionDigits: 1,
-                    maximumFractionDigits: 1
-                  })} км`
+                  text: `Ближайший экипаж уже в ${nearestDistanceKm} км`
                 },
                 { icon: ShieldCheck, text: "Финальная цена согласуется до выезда" },
-                { icon: MessageCircle, text: "Маршрут можно отправить в WhatsApp" }
+                { icon: Phone, text: "Диспетчер на линии 24/7 без форм и ожидания" }
               ].map((item, index) => {
                 const Icon = item.icon;
 
@@ -391,24 +388,53 @@ export default function Home() {
             className="glass hidden rounded-lg p-4 lg:block"
             aria-label="Быстрый вызов эвакуатора"
           >
-            <div className="relative overflow-hidden rounded-lg border border-white/10">
-              <img
-                src={truckImage}
-                alt="Эвакуатор перевозит автомобиль"
-                className="h-44 w-full object-cover"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
+            <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(255,106,26,0.26),transparent_44%),radial-gradient(circle_at_bottom_right,rgba(97,240,255,0.18),transparent_42%),linear-gradient(160deg,rgba(18,18,18,0.96),rgba(12,12,12,0.92))] p-5">
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.05),transparent_22%,transparent_78%,rgba(255,255,255,0.03))]" />
+              <div className="relative flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm text-white/62">Ближайший экипаж</p>
-                  <p className="text-3xl font-semibold text-white">
+                  <p className="text-sm text-white/56">Ближайший экипаж</p>
+                  <p className="mt-2 text-4xl font-semibold text-white">
                     <DistanceCounter value={nearestDistanceKm} />
                   </p>
+                  <p className="mt-2 text-sm text-white/52">до ближайшей точки подачи по Донецку</p>
                 </div>
-                <span className="rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]">
+                <motion.span
+                  className="rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]"
+                  animate={{ scale: [1, 1.06, 1], boxShadow: ["0 0 0 rgba(184,255,90,0)", "0 0 30px rgba(184,255,90,0.38)", "0 0 0 rgba(184,255,90,0)"] }}
+                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                >
                   На линии
-                </span>
+                </motion.span>
+              </div>
+              <div className="relative mt-5 grid grid-cols-[1fr_auto] items-end gap-4 rounded-lg border border-white/10 bg-black/20 p-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/38">Маршрут подачи</p>
+                  <p className="mt-2 text-lg leading-7 text-white/70">
+                    Цена согласуется с оператором до выезда, а водитель на месте спокойно объяснит
+                    погрузку, крепление и весь маршрут.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[rgba(255,106,26,0.3)] bg-[rgba(255,106,26,0.14)] px-4 py-3 text-right">
+                  <span className="block text-xs uppercase tracking-[0.18em] text-[var(--orange)]">Подача</span>
+                  <span className="mt-1 block text-3xl font-semibold text-white">2 км</span>
+                </div>
+              </div>
+              <div className="relative mt-5 grid grid-cols-5 gap-2">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <motion.span
+                    key={index}
+                    className="h-2.5 rounded bg-[linear-gradient(90deg,rgba(255,106,26,0.95),rgba(97,240,255,0.92))]"
+                    animate={{
+                      opacity: [0.26, 1, 0.26],
+                      scaleY: [0.82, 1.18, 0.86]
+                    }}
+                    transition={{
+                      duration: 1.2,
+                      repeat: Infinity,
+                      delay: index * 0.07
+                    }}
+                  />
+                ))}
               </div>
             </div>
 
@@ -449,13 +475,11 @@ export default function Home() {
                   Позвонить
                 </a>
                 <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(184,255,90,0.5)] bg-[rgba(184,255,90,0.12)] px-4 py-3 text-sm font-bold text-white shadow-[0_0_22px_rgba(184,255,90,0.18)] transition hover:border-[var(--lime)] hover:bg-[rgba(184,255,90,0.18)]"
+                  href="#prices"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.42)] bg-[rgba(97,240,255,0.12)] px-4 py-3 text-sm font-bold text-white shadow-[0_0_22px_rgba(97,240,255,0.14)] transition hover:border-[var(--cyan)] hover:bg-[rgba(97,240,255,0.18)]"
                 >
-                  <MessageCircle className="h-4 w-4 text-[var(--lime)]" aria-hidden="true" />
-                  WhatsApp
+                  <ArrowRight className="h-4 w-4 text-[var(--cyan)]" aria-hidden="true" />
+                  Цены
                 </a>
               </div>
               <p className="text-xs leading-5 text-white/48">
@@ -476,8 +500,8 @@ export default function Home() {
                 Стоимость называют до выезда
               </h2>
               <p className="mt-5 max-w-xl text-lg leading-8 text-white/62">
-                Клиент сразу звонит или пишет в WhatsApp, а диспетчер уточняет маршрут, состояние
-                авто и фиксирует цену до подачи.
+                Клиент сразу звонит диспетчеру, а оператор уточняет маршрут, состояние авто и
+                фиксирует цену до подачи без анкет и промежуточных шагов.
               </p>
               <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
                 {trustMetrics.map((item) => (
@@ -495,16 +519,22 @@ export default function Home() {
               <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/24 p-6 sm:p-8">
                 <div className="grid gap-5 md:grid-cols-3">
                   {servicePromises.map((item, index) => (
-                    <article
+                    <motion.article
                       key={item.title}
+                      whileHover={{ y: -6, scale: 1.015 }}
+                      transition={{ type: "spring", stiffness: 260, damping: 22 }}
                       className="rounded-lg border border-white/12 bg-white/7 p-5"
                     >
-                      <span className="grid h-10 w-10 place-items-center rounded-lg bg-[var(--orange)] text-base font-semibold text-[#090909]">
+                      <motion.span
+                        className="grid h-10 w-10 place-items-center rounded-lg bg-[var(--orange)] text-base font-semibold text-[#090909]"
+                        animate={{ y: [0, -2, 0], rotate: [0, 3, 0] }}
+                        transition={{ duration: 2.8, repeat: Infinity, delay: index * 0.16 }}
+                      >
                         {index + 1}
-                      </span>
+                      </motion.span>
                       <h3 className="mt-5 text-xl font-semibold">{item.title}</h3>
                       <p className="mt-3 text-sm leading-6 text-white/58">{item.text}</p>
-                    </article>
+                    </motion.article>
                   ))}
                 </div>
                 <div className="mt-6 rounded-lg border border-[rgba(255,106,26,0.35)] bg-[linear-gradient(135deg,rgba(255,106,26,0.16),rgba(255,255,255,0.06))] p-5 sm:p-6">
@@ -537,13 +567,11 @@ export default function Home() {
                       <Phone className="h-5 w-5" aria-hidden="true" />
                     </a>
                     <a
-                      href={whatsappHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(184,255,90,0.5)] bg-[rgba(184,255,90,0.12)] px-6 py-4 font-semibold text-white transition hover:border-[var(--lime)] hover:bg-[rgba(184,255,90,0.18)]"
+                      href="#prices"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.42)] bg-[rgba(97,240,255,0.12)] px-6 py-4 font-semibold text-white transition hover:border-[var(--cyan)] hover:bg-[rgba(97,240,255,0.18)]"
                     >
-                      Написать в WhatsApp
-                      <MessageCircle className="h-5 w-5 text-[var(--lime)]" aria-hidden="true" />
+                      Смотреть цены
+                      <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
                     </a>
                   </div>
                 </div>
@@ -596,18 +624,22 @@ export default function Home() {
               </h2>
               <p className="mt-5 text-lg leading-8 text-white/62">
                 Эвакуатор Донецк работает по центральным районам, частному сектору, промзонам,
-                трассам и междугородним направлениям. Адрес можно назвать диспетчеру или отправить
-                геометку в WhatsApp.
+                трассам и междугородним направлениям. Адрес и точку подачи достаточно назвать
+                диспетчеру в звонке.
               </p>
               <div className="mt-8 flex flex-wrap gap-2">
                 {["Центр", "Калининский", "Киевский", "Буденновский", "Макеевка", "Горловка", "ДНР"].map(
-                  (zone) => (
-                    <span
+                  (zone, index) => (
+                    <motion.span
                       key={zone}
                       className="rounded-md border border-white/14 bg-white/8 px-3 py-2 text-sm text-white/70"
+                      initial={{ opacity: 0, y: 10 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.05, duration: 0.4 }}
                     >
                       {zone}
-                    </span>
+                    </motion.span>
                   )
                 )}
               </div>
@@ -631,10 +663,14 @@ export default function Home() {
                       <p className="text-sm text-white/56">Работаем по всему ДНР</p>
                       <p className="mt-1 text-xl font-semibold">Подача к адресу, СТО, трассе или парковке</p>
                     </div>
-                    <span className="inline-flex items-center gap-2 rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]">
+                    <motion.span
+                      className="inline-flex items-center gap-2 rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]"
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                    >
                       <MapPin className="h-4 w-4" aria-hidden="true" />
                       Онлайн
-                    </span>
+                    </motion.span>
                   </div>
                 </div>
               </div>
@@ -663,14 +699,24 @@ export default function Home() {
                 <motion.article
                   whileHover={{ y: -8 }}
                   transition={{ type: "spring", stiffness: 280, damping: 24 }}
-                  className="group flex h-full flex-col rounded-lg border border-white/12 bg-white/7 p-6 transition hover:border-[rgba(255,106,26,0.55)] hover:bg-white/10"
+                  className="group relative flex h-full overflow-hidden rounded-lg border border-white/12 bg-white/7 p-6 transition hover:border-[rgba(255,106,26,0.55)] hover:bg-white/10"
                 >
+                  <motion.span
+                    className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,106,26,0.95),rgba(97,240,255,0.8),transparent)]"
+                    animate={{ opacity: [0.42, 1, 0.42], scaleX: [0.82, 1, 0.86] }}
+                    transition={{ duration: 2.4, repeat: Infinity, delay: index * 0.18 }}
+                  />
                   <div className="mb-7 flex items-start justify-between gap-6">
                     <div>
                       <h3 className="text-2xl font-semibold">{item.title}</h3>
                       <p className="mt-2 text-white/55">{item.text}</p>
                     </div>
-                    <Sparkles className="h-6 w-6 text-[var(--cyan)] opacity-72" aria-hidden="true" />
+                    <motion.div
+                      animate={{ y: [0, -4, 0], rotate: [0, 7, 0] }}
+                      transition={{ duration: 3.2, repeat: Infinity, delay: index * 0.22 }}
+                    >
+                      <Sparkles className="h-6 w-6 text-[var(--cyan)] opacity-72" aria-hidden="true" />
+                    </motion.div>
                   </div>
                   <p className="text-5xl font-semibold text-[var(--orange)]">{item.price}</p>
                   <ul className="mt-8 space-y-4 text-white/66">
@@ -734,8 +780,8 @@ export default function Home() {
                     </span>
                     <h3 className="mt-5 text-xl font-semibold">{step}</h3>
                     <p className="mt-3 text-sm leading-6 text-white/55">
-                      {index === 0 && "Оставляете номер или звоните диспетчеру."}
-                      {index === 1 && "Ближайший водитель выезжает к точке."}
+                      {index === 0 && "Звоните диспетчеру и сразу называете адрес."}
+                      {index === 1 && "Ближайший водитель выезжает к точке подачи."}
                       {index === 2 && "Авто крепится и проверяется перед дорогой."}
                       {index === 3 && "Доставляем в сервис, гараж или на стоянку."}
                     </p>
@@ -853,26 +899,24 @@ export default function Home() {
                     Нужен эвакуатор прямо сейчас?
                   </h2>
                   <p className="mt-4 max-w-2xl text-lg leading-8 text-white/66">
-                    Звоните или отправьте геолокацию в WhatsApp. Водитель рассчитает подъезд и
-                    подаст платформу к удобному месту.
+                    Позвоните диспетчеру, назовите адрес и состояние машины. Итоговую цену
+                    согласуют до выезда, а водитель подаст платформу к удобному месту.
                   </p>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <a
                     href={phoneHref}
-                    className="glow-button inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(255,106,26,0.78)] bg-[var(--orange)] px-6 py-4 font-bold text-[#090909] shadow-[0_0_34px_rgba(255,106,26,0.52)]"
+                    className="glow-button inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,106,26,0.78)] bg-[var(--orange)] px-6 py-4 font-bold text-[#090909] shadow-[0_0_34px_rgba(255,106,26,0.52)] sm:w-auto"
                   >
                     <Phone className="h-5 w-5" aria-hidden="true" />
                     Позвонить
                   </a>
                   <a
-                    href={whatsappHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/28 px-6 py-4 font-semibold transition hover:border-[var(--lime)] hover:bg-black/42"
+                    href="#prices"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/28 px-6 py-4 font-semibold transition hover:border-[var(--cyan)] hover:bg-black/42 sm:w-auto"
                   >
-                    <MessageCircle className="h-5 w-5 text-[var(--lime)]" aria-hidden="true" />
-                    WhatsApp
+                    <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
+                    Смотреть цены
                   </a>
                 </div>
               </div>
@@ -920,9 +964,7 @@ export default function Home() {
             <a className="block transition hover:text-white" href={phoneHref}>
               {phoneDisplay}
             </a>
-            <a className="block transition hover:text-white" href={whatsappHref}>
-              WhatsApp
-            </a>
+            <span className="block">Работаем 24/7</span>
             <span className="block">Донецк, ДНР</span>
           </div>
           <div className="space-y-3">
@@ -945,7 +987,7 @@ export default function Home() {
 
       <a
         href={phoneHref}
-        className="glow-button fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-lg bg-[var(--orange)] px-4 py-4 font-semibold text-[#090909] shadow-[0_18px_60px_rgba(0,0,0,0.36)]"
+        className="glow-button fixed bottom-5 right-4 z-50 inline-flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-lg bg-[var(--orange)] px-4 py-4 font-semibold text-[#090909] shadow-[0_18px_60px_rgba(0,0,0,0.36)] sm:right-5"
         aria-label="Позвонить и вызвать эвакуатор"
       >
         <Phone className="h-5 w-5" aria-hidden="true" />
