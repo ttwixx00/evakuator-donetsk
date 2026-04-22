@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   motion,
   useScroll,
@@ -9,6 +9,7 @@ import {
 import {
   ArrowRight,
   BadgeCheck,
+  CarFront,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -17,6 +18,7 @@ import {
   ShieldCheck,
   Sparkles,
   Truck,
+  Wrench,
   Zap
 } from "lucide-react";
 
@@ -72,6 +74,65 @@ const prices = [
   }
 ];
 
+const calculatorVehicles = [
+  {
+    id: "passenger",
+    title: "Легковые",
+    text: "Седаны, хэтчбеки, универсалы",
+    base: 2500,
+    perKm: 45,
+    icon: CarFront
+  },
+  {
+    id: "suv",
+    title: "Джипы",
+    text: "Кроссоверы, внедорожники, полный привод",
+    base: 2500,
+    perKm: 55,
+    icon: Truck
+  },
+  {
+    id: "special",
+    title: "Спецтехника",
+    text: "Мини-техника, коммерческий транспорт, погрузчики",
+    base: 3500,
+    perKm: 78,
+    icon: Wrench
+  }
+] as const;
+
+const calculatorExtras = [
+  {
+    id: "locked",
+    title: "Заблокированы колеса",
+    price: 450
+  },
+  {
+    id: "accident",
+    title: "После ДТП",
+    price: 650
+  },
+  {
+    id: "hardAccess",
+    title: "Сложный подъезд",
+    price: 550
+  }
+] as const;
+
+const mapProviders = {
+  yandex: {
+    label: "Яндекс Карты",
+    embed:
+      "https://yandex.ru/map-widget/v1/?ll=37.805000%2C48.015900&z=11&mode=search&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA",
+    href: "https://yandex.ru/maps/?ll=37.805000%2C48.015900&z=11&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA"
+  },
+  google: {
+    label: "Google Maps",
+    embed: "https://www.google.com/maps?q=48.0159,37.8050&z=11&output=embed",
+    href: "https://www.google.com/maps/search/?api=1&query=48.0159,37.8050"
+  }
+} as const;
+
 const trustMetrics = [
   { value: "2", label: "свободных эвакуатора" },
   { value: "18 мин", label: "средняя подача" },
@@ -126,6 +187,11 @@ const faq = [
       "Базовая стоимость начинается от 2 500 ₽. Точную итоговую цену оператор согласует в звонке до выезда, а водитель на месте объяснит детали погрузки и маршрута."
   },
   {
+    question: "Можно ли заранее понять примерную стоимость эвакуатора?",
+    answer:
+      "Да. На сайте можно посмотреть примерный расчет по типу авто, расстоянию и условиям подачи. Конечная цена подтверждается в разговоре с оператором до выезда, а водитель на месте уточняет способ погрузки и маршрут."
+  },
+  {
     question: "Как быстро приезжает эвакуатор?",
     answer:
       "Среднее время прибытия по Донецку: 18 минут. Если ближайшая машина свободна рядом, подача может занять около 15 минут."
@@ -170,6 +236,10 @@ function Reveal({
   );
 }
 
+function formatPrice(value: number) {
+  return `${value.toLocaleString("ru-RU")} ₽`;
+}
+
 function DistanceCounter({ value }: { value: number }) {
   const [display, setDisplay] = useState(value + 2.4);
 
@@ -206,10 +276,55 @@ function DistanceCounter({ value }: { value: number }) {
   );
 }
 
+function PriceCounter({ value }: { value: number }) {
+  const [display, setDisplay] = useState(value);
+  const previousValue = useRef(value);
+
+  useEffect(() => {
+    let frame = 0;
+    const startValue = previousValue.current;
+    const startedAt = performance.now();
+    const duration = 720;
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = Math.round(startValue + (value - startValue) * eased);
+      setDisplay(next);
+
+      if (progress < 1) {
+        frame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    previousValue.current = value;
+    frame = window.requestAnimationFrame(tick);
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [value]);
+
+  return <span>{formatPrice(display)}</span>;
+}
+
 export default function Home() {
   const [activeReview, setActiveReview] = useState(0);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<(typeof calculatorVehicles)[number]["id"]>("passenger");
+  const [distanceKm, setDistanceKm] = useState(14);
+  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
+  const [activeMap, setActiveMap] = useState<keyof typeof mapProviders>("yandex");
   const { scrollY } = useScroll();
   const routeProgress = useTransform(scrollY, [1850, 2850], ["0%", "100%"]);
+
+  const currentVehicle =
+    calculatorVehicles.find((vehicle) => vehicle.id === selectedVehicle) ?? calculatorVehicles[0];
+  const selectedExtraItems = calculatorExtras.filter((item) => selectedExtras.includes(item.id));
+  const extrasTotal = selectedExtraItems.reduce((sum, item) => sum + item.price, 0);
+  const estimatedPrice =
+    Math.round((currentVehicle.base + currentVehicle.perKm * distanceKm + extrasTotal) / 50) * 50;
+  const activeMapData = mapProviders[activeMap];
+  const currentPriceCard =
+    prices.find((item) => item.title === currentVehicle.title) ?? prices[0];
 
   const faqSchema = {
     "@context": "https://schema.org",
@@ -228,12 +343,15 @@ export default function Home() {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: "Эвакуатор Донецк 24/7",
+    url: "https://ttwixx00.github.io/evakuator-donetsk/",
     telephone: phoneDisplay,
     areaServed: ["Донецк", "ДНР", "Макеевка", "Горловка", "Ясиноватая"],
     priceRange: "от 2500 ₽",
     openingHours: "Mo-Su 00:00-23:59",
+    serviceType: ["Эвакуатор Донецк", "Эвакуация авто ДНР", "Вызвать эвакуатор 24/7"],
+    hasMap: mapProviders.yandex.href,
     description:
-      "Эвакуатор в Донецке и по ДНР. Быстрая подача, аккуратная погрузка, прозрачная цена до выезда."
+      "Эвакуатор в Донецке и по ДНР. Быстрая подача, аккуратная погрузка, примерный онлайн расчет и прозрачная цена до выезда."
   };
 
   useEffect(() => {
@@ -243,6 +361,12 @@ export default function Home() {
 
     return () => window.clearInterval(timer);
   }, []);
+
+  const toggleExtra = (id: string) => {
+    setSelectedExtras((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  };
 
   const activeReviewItem = reviews[activeReview];
 
@@ -271,8 +395,8 @@ export default function Home() {
           </a>
 
           <nav className="hidden items-center gap-6 text-sm text-white/68 lg:flex">
-            <a className="transition hover:text-white" href="#service">
-              Условия
+            <a className="transition hover:text-white" href="#calculator">
+              Расчет
             </a>
             <a className="transition hover:text-white" href="#coverage">
               Карта
@@ -339,18 +463,18 @@ export default function Home() {
 
             <div className="mt-9 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <a
-                href={phoneHref}
+                href="#calculator"
                 className="glow-button inline-flex w-full max-w-full items-center justify-center gap-2 rounded-lg bg-[var(--orange)] px-5 py-4 text-base font-semibold text-[#090909] sm:w-auto sm:px-6"
               >
-                Вызвать эвакуатор
-                <Phone className="h-5 w-5" aria-hidden="true" />
+                Рассчитать стоимость
+                <ArrowRight className="h-5 w-5" aria-hidden="true" />
               </a>
               <a
-                href="#prices"
+                href={phoneHref}
                 className="glow-button inline-flex w-full max-w-full items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.55)] bg-[rgba(97,240,255,0.16)] px-5 py-4 text-base font-semibold text-white shadow-[0_0_26px_rgba(97,240,255,0.24)] backdrop-blur-xl transition hover:border-[rgba(97,240,255,0.9)] hover:bg-[rgba(97,240,255,0.22)] sm:w-auto sm:px-6"
               >
-                <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
-                Смотреть цены
+                <Phone className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
+                Позвонить сейчас
               </a>
             </div>
 
@@ -406,19 +530,6 @@ export default function Home() {
                   На линии
                 </motion.span>
               </div>
-              <div className="relative mt-5 grid grid-cols-[1fr_auto] items-end gap-4 rounded-lg border border-white/10 bg-black/20 p-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/38">Маршрут подачи</p>
-                  <p className="mt-2 text-lg leading-7 text-white/70">
-                    Цена согласуется с оператором до выезда, а водитель на месте спокойно объяснит
-                    погрузку, крепление и весь маршрут.
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[rgba(255,106,26,0.3)] bg-[rgba(255,106,26,0.14)] px-4 py-3 text-right">
-                  <span className="block text-xs uppercase tracking-[0.18em] text-[var(--orange)]">Подача</span>
-                  <span className="mt-1 block text-3xl font-semibold text-white">2 км</span>
-                </div>
-              </div>
               <div className="relative mt-5 grid grid-cols-5 gap-2">
                 {Array.from({ length: 10 }).map((_, index) => (
                   <motion.span
@@ -436,36 +547,37 @@ export default function Home() {
                   />
                 ))}
               </div>
+              <div className="relative mt-5 grid gap-3 xl:grid-cols-2">
+                <motion.div
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  className="rounded-lg border border-white/10 bg-black/20 p-4"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/42">Среднее прибытие</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="grid h-11 w-11 place-items-center rounded-lg bg-[rgba(255,106,26,0.18)] text-[var(--orange)]">
+                      <Clock3 className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="text-3xl font-semibold text-white">18 минут</p>
+                      <p className="mt-1 text-sm text-white/54">по Донецку и ближайшим районам</p>
+                    </div>
+                  </div>
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  className="rounded-lg border border-[rgba(97,240,255,0.16)] bg-[rgba(97,240,255,0.08)] p-4"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/42">Точная сумма</p>
+                  <p className="mt-3 text-sm leading-6 text-white/74">
+                    Согласуется с оператором до выезда. Водитель на месте подтверждает погрузку,
+                    крепление и маршрут без скрытых доплат.
+                  </p>
+                </motion.div>
+              </div>
             </div>
 
             <div className="mt-4 space-y-3">
               <p className="block text-sm text-white/68">Быстрый вызов</p>
-              <div className="grid grid-cols-[1fr_auto] items-end gap-4 rounded-lg border border-white/12 bg-black/24 p-4">
-                <div>
-                  <p className="text-xs uppercase text-white/42">Диспетчерский маршрут</p>
-                  <p className="mt-2 text-4xl font-semibold text-white">
-                    <DistanceCounter value={nearestDistanceKm} />
-                  </p>
-                  <p className="mt-2 text-sm text-white/56">до ближайшего свободного эвакуатора</p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <motion.span
-                      key={index}
-                      className="h-2.5 w-14 rounded bg-[linear-gradient(90deg,rgba(255,106,26,0.95),rgba(97,240,255,0.92))]"
-                      animate={{
-                        opacity: [0.35, 1, 0.35],
-                        scaleX: [0.72, 1, 0.78]
-                      }}
-                      transition={{
-                        duration: 1.25,
-                        repeat: Infinity,
-                        delay: index * 0.08
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
               <div className="grid grid-cols-2 gap-2">
                 <a
                   href={phoneHref}
@@ -483,11 +595,205 @@ export default function Home() {
                 </a>
               </div>
               <p className="text-xs leading-5 text-white/48">
-                Оператор уточнит адрес и состояние авто, после чего назовет итоговую цену до
-                выезда. Водитель на подаче дополнительно объяснит погрузку, маршрут и фиксацию.
+                Оператор уточнит адрес, состояние автомобиля и сразу назовет ориентир по стоимости.
+                Финальная цена подтверждается до выезда, а водитель на подаче спокойно объяснит
+                погрузку и весь маршрут.
               </p>
             </div>
           </motion.aside>
+        </div>
+      </section>
+
+      <section id="calculator" className="py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <Reveal className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="mb-3 text-sm font-semibold text-[var(--orange)]">Онлайн расчет</p>
+              <h2 className="text-balance text-4xl font-semibold leading-tight sm:text-5xl">
+                Примерная стоимость эвакуатора в Донецке за 30 секунд
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-white/62">
+                Выберите тип автомобиля, расстояние и условия подачи, чтобы увидеть примерный
+                расчет. Точная цена согласуется в разговоре с оператором до выезда, а водитель на
+                месте подтверждает способ погрузки, фиксацию и маршрут.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-sm text-white/70">
+              {["эвакуатор Донецк", "вызвать эвакуатор", "эвакуация авто ДНР"].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-md border border-white/12 bg-white/8 px-3 py-2 backdrop-blur-xl"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.08} className="mt-10">
+            <div className="glass overflow-hidden rounded-lg p-4 sm:p-6">
+              <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+                <div className="rounded-lg border border-white/10 bg-black/20 p-5 sm:p-6">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {calculatorVehicles.map((vehicle, index) => {
+                      const Icon = vehicle.icon;
+                      const active = selectedVehicle === vehicle.id;
+
+                      return (
+                        <motion.button
+                          key={vehicle.id}
+                          type="button"
+                          onClick={() => setSelectedVehicle(vehicle.id)}
+                          whileHover={{ y: -6, scale: 1.01 }}
+                          whileTap={{ scale: 0.985 }}
+                          className={`rounded-lg border p-4 text-left transition ${
+                            active
+                              ? "border-[rgba(255,106,26,0.72)] bg-[rgba(255,106,26,0.14)] shadow-[0_0_26px_rgba(255,106,26,0.16)]"
+                              : "border-white/10 bg-white/6 hover:border-[rgba(97,240,255,0.34)] hover:bg-white/8"
+                          }`}
+                        >
+                          <motion.span
+                            className="grid h-11 w-11 place-items-center rounded-lg bg-black/22 text-white"
+                            animate={active ? { rotate: [0, -6, 0], y: [0, -2, 0] } : undefined}
+                            transition={{ duration: 1.8, repeat: Infinity, delay: index * 0.14 }}
+                          >
+                            <Icon
+                              className={`h-5 w-5 ${active ? "text-[var(--orange)]" : "text-[var(--cyan)]"}`}
+                              aria-hidden="true"
+                            />
+                          </motion.span>
+                          <p className="mt-4 text-lg font-semibold">{vehicle.title}</p>
+                          <p className="mt-2 text-sm leading-6 text-white/56">{vehicle.text}</p>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-6 rounded-lg border border-white/10 bg-black/20 p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-white/70">Расстояние перевозки</p>
+                        <p className="mt-2 text-4xl font-semibold text-white">
+                          {distanceKm}
+                          <span className="ml-2 text-lg font-medium text-white/52">км</span>
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-[rgba(97,240,255,0.18)] bg-[rgba(97,240,255,0.08)] px-4 py-3 text-sm text-white/68">
+                        Чем дальше маршрут, тем выше примерная стоимость подачи и перевозки.
+                      </div>
+                    </div>
+                    <div className="mt-5">
+                      <input
+                        type="range"
+                        min={1}
+                        max={80}
+                        step={1}
+                        value={distanceKm}
+                        onChange={(event) => setDistanceKm(Number(event.target.value))}
+                        className="h-3 w-full cursor-pointer accent-[var(--orange)]"
+                        aria-label="Расстояние перевозки"
+                      />
+                      <div className="mt-4 flex items-center justify-between text-xs uppercase tracking-[0.16em] text-white/38">
+                        <span>1 км</span>
+                        <span>20 км</span>
+                        <span>40 км</span>
+                        <span>80 км</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    <p className="text-sm font-semibold text-white/70">Дополнительные условия</p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      {calculatorExtras.map((item) => {
+                        const active = selectedExtras.includes(item.id);
+
+                        return (
+                          <motion.button
+                            key={item.id}
+                            type="button"
+                            onClick={() => toggleExtra(item.id)}
+                            whileHover={{ y: -4 }}
+                            whileTap={{ scale: 0.985 }}
+                            className={`rounded-lg border p-4 text-left transition ${
+                              active
+                                ? "border-[rgba(97,240,255,0.45)] bg-[rgba(97,240,255,0.12)]"
+                                : "border-white/10 bg-white/6 hover:border-[rgba(255,106,26,0.42)] hover:bg-white/8"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="block text-sm font-semibold">{item.title}</span>
+                              <span className="rounded-md bg-black/24 px-2 py-1 text-xs text-[var(--orange)]">
+                                +{formatPrice(item.price)}
+                              </span>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-[rgba(255,106,26,0.24)] bg-[linear-gradient(160deg,rgba(255,106,26,0.12),rgba(255,255,255,0.06),rgba(97,240,255,0.08))] p-5 sm:p-6">
+                  <p className="text-sm font-semibold text-[var(--lime)]">Примерная стоимость</p>
+                  <div className="mt-4 text-5xl font-semibold leading-none text-white sm:text-6xl">
+                    <PriceCounter value={estimatedPrice} />
+                  </div>
+                  <p className="mt-4 text-base leading-7 text-white/70">
+                    Для {currentVehicle.title.toLowerCase()} на {distanceKm} км. Это ориентир по
+                    маршруту, чтобы понять порядок стоимости до звонка.
+                  </p>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/38">Стартовая подача</p>
+                      <p className="mt-3 text-3xl font-semibold text-white">{currentPriceCard.price}</p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/38">Доп. условия</p>
+                      <p className="mt-3 text-3xl font-semibold text-white">
+                        {extrasTotal > 0 ? formatPrice(extrasTotal) : "Без доплат"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 rounded-lg border border-[rgba(97,240,255,0.18)] bg-[rgba(97,240,255,0.08)] p-5">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-black/22 text-[var(--cyan)]">
+                        <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <p className="text-lg font-semibold">Как это работает по цене</p>
+                        <p className="mt-2 text-sm leading-6 text-white/72">
+                          Сайт показывает примерный расчет. Конечная стоимость согласуется после
+                          разговора с оператором до выезда, а водитель на месте подтверждает
+                          способ погрузки, крепление и конкретный маршрут без неожиданных
+                          накруток.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <a
+                      href={phoneHref}
+                      className="glow-button inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--orange)] px-6 py-4 font-semibold text-[#090909]"
+                    >
+                      Позвонить и подтвердить
+                      <Phone className="h-5 w-5" aria-hidden="true" />
+                    </a>
+                    <a
+                      href="#prices"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[rgba(97,240,255,0.42)] bg-[rgba(97,240,255,0.12)] px-6 py-4 font-semibold text-white transition hover:border-[var(--cyan)] hover:bg-[rgba(97,240,255,0.18)]"
+                    >
+                      Смотреть тарифы
+                      <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -500,8 +806,9 @@ export default function Home() {
                 Стоимость называют до выезда
               </h2>
               <p className="mt-5 max-w-xl text-lg leading-8 text-white/62">
-                Клиент сразу звонит диспетчеру, а оператор уточняет маршрут, состояние авто и
-                фиксирует цену до подачи без анкет и промежуточных шагов.
+                Клиент может сразу позвонить диспетчеру или сначала посмотреть примерный онлайн
+                расчет. После звонка оператор уточняет маршрут, состояние авто и фиксирует цену до
+                подачи без анкет и промежуточных шагов.
               </p>
               <div className="mt-8 grid gap-3 text-sm sm:grid-cols-3">
                 {trustMetrics.map((item) => (
@@ -620,13 +927,29 @@ export default function Home() {
             <div>
               <p className="mb-3 text-sm font-semibold text-[var(--cyan)]">Карта покрытия</p>
               <h2 className="text-balance text-4xl font-semibold leading-tight sm:text-5xl">
-                Донецк, районы города и маршруты по ДНР
+                Донецк, районы города и маршруты по ДНР в Google и Яндекс Картах
               </h2>
               <p className="mt-5 text-lg leading-8 text-white/62">
                 Эвакуатор Донецк работает по центральным районам, частному сектору, промзонам,
                 трассам и междугородним направлениям. Адрес и точку подачи достаточно назвать
                 диспетчеру в звонке.
               </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                {(Object.keys(mapProviders) as Array<keyof typeof mapProviders>).map((provider) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    onClick={() => setActiveMap(provider)}
+                    className={`rounded-lg border px-4 py-3 text-sm font-semibold transition ${
+                      activeMap === provider
+                        ? "border-[rgba(255,106,26,0.62)] bg-[rgba(255,106,26,0.14)] text-white"
+                        : "border-white/12 bg-white/6 text-white/68 hover:border-[rgba(97,240,255,0.4)] hover:text-white"
+                    }`}
+                  >
+                    {mapProviders[provider].label}
+                  </button>
+                ))}
+              </div>
               <div className="mt-8 flex flex-wrap gap-2">
                 {["Центр", "Калининский", "Киевский", "Буденновский", "Макеевка", "Горловка", "ДНР"].map(
                   (zone, index) => (
@@ -650,27 +973,39 @@ export default function Home() {
             <div className="glass overflow-hidden rounded-lg p-2">
               <div className="relative min-h-[440px] overflow-hidden rounded-lg border border-white/10 bg-[#141414]">
                 <iframe
+                  key={activeMap}
                   title="Карта Донецка и зона работы эвакуатора"
-                  src="https://yandex.ru/map-widget/v1/?ll=37.805000%2C48.015900&z=11&mode=search&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA"
+                  src={activeMapData.embed}
                   loading="lazy"
                   className="absolute inset-0 h-full w-full border-0 opacity-80 grayscale"
                   allowFullScreen
                 />
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(9,9,9,0.72),transparent_42%,rgba(255,106,26,0.16))]" />
-                <div className="pointer-events-none absolute bottom-4 left-4 right-4 rounded-lg border border-white/14 bg-black/70 p-4 backdrop-blur-xl">
+                <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-white/14 bg-black/70 p-4 backdrop-blur-xl">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-white/56">Работаем по всему ДНР</p>
                       <p className="mt-1 text-xl font-semibold">Подача к адресу, СТО, трассе или парковке</p>
                     </div>
-                    <motion.span
-                      className="inline-flex items-center gap-2 rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]"
-                      animate={{ scale: [1, 1.05, 1] }}
-                      transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                      <MapPin className="h-4 w-4" aria-hidden="true" />
-                      Онлайн
-                    </motion.span>
+                    <div className="flex flex-wrap gap-2">
+                      <motion.span
+                        className="inline-flex items-center gap-2 rounded-md bg-[var(--lime)] px-3 py-2 text-sm font-semibold text-[#090909]"
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <MapPin className="h-4 w-4" aria-hidden="true" />
+                        Онлайн
+                      </motion.span>
+                      <a
+                        href={activeMapData.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="pointer-events-auto inline-flex items-center gap-2 rounded-md border border-white/14 bg-white/8 px-3 py-2 text-sm font-semibold text-white transition hover:border-[rgba(97,240,255,0.4)] hover:bg-white/12"
+                      >
+                        Открыть карту
+                        <ArrowRight className="h-4 w-4 text-[var(--cyan)]" aria-hidden="true" />
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -693,47 +1028,61 @@ export default function Home() {
             </p>
           </Reveal>
 
-          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {prices.map((item, index) => (
               <Reveal key={item.title} delay={index * 0.06}>
                 <motion.article
-                  whileHover={{ y: -8 }}
+                  whileHover={{ y: -10, scale: 1.01 }}
                   transition={{ type: "spring", stiffness: 280, damping: 24 }}
-                  className="group relative flex h-full overflow-hidden rounded-lg border border-white/12 bg-white/7 p-6 transition hover:border-[rgba(255,106,26,0.55)] hover:bg-white/10"
+                  className="group relative flex h-full overflow-hidden rounded-lg border border-white/12 bg-white/7 p-6 transition hover:border-[rgba(255,106,26,0.55)] hover:bg-white/10 sm:p-7"
                 >
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(97,240,255,0.1),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,106,26,0.1),transparent_34%)] opacity-0 transition duration-300 group-hover:opacity-100" />
                   <motion.span
                     className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,106,26,0.95),rgba(97,240,255,0.8),transparent)]"
                     animate={{ opacity: [0.42, 1, 0.42], scaleX: [0.82, 1, 0.86] }}
                     transition={{ duration: 2.4, repeat: Infinity, delay: index * 0.18 }}
                   />
-                  <div className="mb-7 flex items-start justify-between gap-6">
-                    <div>
-                      <h3 className="text-2xl font-semibold">{item.title}</h3>
-                      <p className="mt-2 text-white/55">{item.text}</p>
+                  <div className="relative z-10 flex h-full flex-col">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="min-w-0">
+                        <h3 className="text-2xl font-semibold">{item.title}</h3>
+                        <p className="mt-2 text-white/55">{item.text}</p>
+                      </div>
+                      <motion.div
+                        animate={{ y: [0, -4, 0], rotate: [0, 7, 0] }}
+                        transition={{ duration: 3.2, repeat: Infinity, delay: index * 0.22 }}
+                      >
+                        <Sparkles className="h-6 w-6 shrink-0 text-[var(--cyan)] opacity-72" aria-hidden="true" />
+                      </motion.div>
                     </div>
-                    <motion.div
-                      animate={{ y: [0, -4, 0], rotate: [0, 7, 0] }}
-                      transition={{ duration: 3.2, repeat: Infinity, delay: index * 0.22 }}
+
+                    <div className="mt-6 rounded-lg border border-[rgba(255,106,26,0.18)] bg-black/22 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-white/38">Стартовая цена</p>
+                      <p className="mt-3 whitespace-nowrap text-4xl font-semibold leading-none text-[var(--orange)] sm:text-5xl">
+                        {item.price}
+                      </p>
+                    </div>
+
+                    <ul className="mt-7 flex-1 space-y-4 text-white/66">
+                      {item.items.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3">
+                          <BadgeCheck
+                            className="mt-0.5 h-5 w-5 shrink-0 text-[var(--lime)]"
+                            aria-hidden="true"
+                          />
+                          <span className="leading-7">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <a
+                      href={phoneHref}
+                      className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/24 px-4 py-3 font-semibold transition group-hover:border-[var(--orange)]"
                     >
-                      <Sparkles className="h-6 w-6 text-[var(--cyan)] opacity-72" aria-hidden="true" />
-                    </motion.div>
+                      Вызвать эвакуатор
+                      <Phone className="h-4 w-4" aria-hidden="true" />
+                    </a>
                   </div>
-                  <p className="text-5xl font-semibold text-[var(--orange)]">{item.price}</p>
-                  <ul className="mt-8 space-y-4 text-white/66">
-                    {item.items.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3">
-                        <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-[var(--lime)]" aria-hidden="true" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <a
-                    href={phoneHref}
-                    className="mt-8 inline-flex items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/24 px-4 py-3 font-semibold transition group-hover:border-[var(--orange)]"
-                  >
-                    Вызвать эвакуатор
-                    <Phone className="h-4 w-4" aria-hidden="true" />
-                  </a>
                 </motion.article>
               </Reveal>
             ))}
@@ -903,20 +1252,20 @@ export default function Home() {
                     согласуют до выезда, а водитель подаст платформу к удобному месту.
                   </p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
                   <a
                     href={phoneHref}
-                    className="glow-button inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,106,26,0.78)] bg-[var(--orange)] px-6 py-4 font-bold text-[#090909] shadow-[0_0_34px_rgba(255,106,26,0.52)] sm:w-auto"
+                    className="glow-button inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(255,106,26,0.78)] bg-[var(--orange)] px-6 py-4 font-bold text-[#090909] shadow-[0_0_34px_rgba(255,106,26,0.52)] sm:w-auto lg:min-w-[220px]"
                   >
                     <Phone className="h-5 w-5" aria-hidden="true" />
                     Позвонить
                   </a>
                   <a
-                    href="#prices"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/28 px-6 py-4 font-semibold transition hover:border-[var(--cyan)] hover:bg-black/42 sm:w-auto"
+                    href="#calculator"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/16 bg-black/28 px-6 py-4 font-semibold transition hover:border-[var(--cyan)] hover:bg-black/42 sm:w-auto lg:min-w-[220px]"
                   >
                     <ArrowRight className="h-5 w-5 text-[var(--cyan)]" aria-hidden="true" />
-                    Смотреть цены
+                    Рассчитать стоимость
                   </a>
                 </div>
               </div>
@@ -987,7 +1336,7 @@ export default function Home() {
 
       <a
         href={phoneHref}
-        className="glow-button fixed bottom-5 right-4 z-50 inline-flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-lg bg-[var(--orange)] px-4 py-4 font-semibold text-[#090909] shadow-[0_18px_60px_rgba(0,0,0,0.36)] sm:right-5"
+        className="glow-button fixed bottom-5 right-5 z-50 inline-flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-lg bg-[var(--orange)] px-4 py-4 font-semibold text-[#090909] shadow-[0_18px_60px_rgba(0,0,0,0.36)] sm:right-6"
         aria-label="Позвонить и вызвать эвакуатор"
       >
         <Phone className="h-5 w-5" aria-hidden="true" />
