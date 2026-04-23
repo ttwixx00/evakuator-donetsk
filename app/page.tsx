@@ -22,13 +22,13 @@ import {
   Zap
 } from "lucide-react";
 
-const phoneDisplay = "+7 (949) 000-15-15";
-const phoneHref = "tel:+79490001515";
+const phoneDisplay = "+7 (949) 4-999-109";
+const phoneHref = "tel:+79494999109";
 const truckImage =
   "https://images.unsplash.com/photo-1730514785075-b065c757b653?auto=format&fit=crop&fm=webp&q=72&w=1600";
 const fleetImage =
   "https://images.unsplash.com/photo-1686966933735-305bd8fe0a77?auto=format&fit=crop&fm=webp&q=76&w=1400";
-const nearestDistanceKm = 2;
+const nearestDistanceKm = 1.8;
 
 const benefits = [
   {
@@ -56,13 +56,13 @@ const benefits = [
 const prices = [
   {
     title: "Легковые",
-    price: "от 2 500 ₽",
+    price: "от 3 000 ₽",
     text: "Седаны, хэтчбеки, универсалы",
     items: ["Подача по Донецку", "Погрузка на платформу", "Фотоотчет по запросу"]
   },
   {
     title: "Джипы",
-    price: "от 2 500 ₽",
+    price: "от 3 000 ₽",
     text: "Кроссоверы, внедорожники, полный привод",
     items: ["Усиленная фиксация", "Перевозка после ДТП", "Доставка в сервис"]
   },
@@ -79,7 +79,7 @@ const calculatorVehicles = [
     id: "passenger",
     title: "Легковые",
     text: "Седаны, хэтчбеки, универсалы",
-    base: 2500,
+    base: 3000,
     perKm: 45,
     icon: CarFront
   },
@@ -87,7 +87,7 @@ const calculatorVehicles = [
     id: "suv",
     title: "Джипы",
     text: "Кроссоверы, внедорожники, полный привод",
-    base: 2500,
+    base: 3000,
     perKm: 55,
     icon: Truck
   },
@@ -101,12 +101,9 @@ const calculatorVehicles = [
   }
 ] as const;
 
+const lockedWheelPrice = 500;
+
 const calculatorExtras = [
-  {
-    id: "locked",
-    title: "Заблокированы колеса",
-    price: 450
-  },
   {
     id: "accident",
     title: "После ДТП",
@@ -119,18 +116,10 @@ const calculatorExtras = [
   }
 ] as const;
 
-const mapProviders = {
-  yandex: {
-    label: "Яндекс Карты",
-    embed:
-      "https://yandex.ru/map-widget/v1/?ll=37.805000%2C48.015900&z=11&mode=search&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA",
-    href: "https://yandex.ru/maps/?ll=37.805000%2C48.015900&z=11&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA"
-  },
-  google: {
-    label: "Google Maps",
-    embed: "https://www.google.com/maps?q=48.0159,37.8050&z=11&output=embed",
-    href: "https://www.google.com/maps/search/?api=1&query=48.0159,37.8050"
-  }
+const yandexMap = {
+  embed:
+    "https://yandex.ru/map-widget/v1/?ll=37.805000%2C48.015900&z=11&mode=search&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA",
+  href: "https://yandex.ru/maps/?ll=37.805000%2C48.015900&z=11&text=%D0%94%D0%BE%D0%BD%D0%B5%D1%86%D0%BA"
 } as const;
 
 const trustMetrics = [
@@ -184,7 +173,7 @@ const faq = [
   {
     question: "Сколько стоит вызвать эвакуатор в Донецке?",
     answer:
-      "Базовая стоимость начинается от 2 500 ₽. Точную итоговую цену оператор согласует в звонке до выезда, а водитель на месте объяснит детали погрузки и маршрута."
+      "Базовая стоимость начинается от 3 000 ₽. Точную итоговую цену оператор согласует в звонке до выезда, а водитель на месте объяснит детали погрузки и маршрута."
   },
   {
     question: "Можно ли заранее понять примерную стоимость эвакуатора?",
@@ -240,6 +229,13 @@ function formatPrice(value: number) {
   return `${value.toLocaleString("ru-RU")} ₽`;
 }
 
+function formatDistance(value: number) {
+  return value.toLocaleString("ru-RU", {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
+    maximumFractionDigits: Number.isInteger(value) ? 0 : 1
+  });
+}
+
 function DistanceCounter({ value }: { value: number }) {
   const [display, setDisplay] = useState(value + 2.4);
 
@@ -267,10 +263,7 @@ function DistanceCounter({ value }: { value: number }) {
 
   return (
     <span>
-      {display.toLocaleString("ru-RU", {
-        minimumFractionDigits: Number.isInteger(value) ? 0 : 1,
-        maximumFractionDigits: Number.isInteger(value) ? 0 : 1
-      })}
+      {formatDistance(display)}
       <span className="ml-2 text-lg font-medium text-white/54">км</span>
     </span>
   );
@@ -311,18 +304,19 @@ export default function Home() {
   const [selectedVehicle, setSelectedVehicle] =
     useState<(typeof calculatorVehicles)[number]["id"]>("passenger");
   const [distanceKm, setDistanceKm] = useState(14);
+  const [lockedWheels, setLockedWheels] = useState(0);
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
-  const [activeMap, setActiveMap] = useState<keyof typeof mapProviders>("yandex");
   const { scrollY } = useScroll();
   const routeProgress = useTransform(scrollY, [1850, 2850], ["0%", "100%"]);
 
   const currentVehicle =
     calculatorVehicles.find((vehicle) => vehicle.id === selectedVehicle) ?? calculatorVehicles[0];
   const selectedExtraItems = calculatorExtras.filter((item) => selectedExtras.includes(item.id));
-  const extrasTotal = selectedExtraItems.reduce((sum, item) => sum + item.price, 0);
+  const extrasTotal =
+    lockedWheels * lockedWheelPrice +
+    selectedExtraItems.reduce((sum, item) => sum + item.price, 0);
   const estimatedPrice =
     Math.round((currentVehicle.base + currentVehicle.perKm * distanceKm + extrasTotal) / 50) * 50;
-  const activeMapData = mapProviders[activeMap];
   const currentPriceCard =
     prices.find((item) => item.title === currentVehicle.title) ?? prices[0];
 
@@ -346,10 +340,10 @@ export default function Home() {
     url: "https://ttwixx00.github.io/evakuator-donetsk/",
     telephone: phoneDisplay,
     areaServed: ["Донецк", "ДНР", "Макеевка", "Горловка", "Ясиноватая"],
-    priceRange: "от 2500 ₽",
+    priceRange: "от 3000 ₽",
     openingHours: "Mo-Su 00:00-23:59",
     serviceType: ["Эвакуатор Донецк", "Эвакуация авто ДНР", "Вызвать эвакуатор 24/7"],
-    hasMap: mapProviders.yandex.href,
+    hasMap: yandexMap.href,
     description:
       "Эвакуатор в Донецке и по ДНР. Быстрая подача, аккуратная погрузка, примерный онлайн расчет и прозрачная цена до выезда."
   };
@@ -482,7 +476,7 @@ export default function Home() {
               {[
                 {
                   icon: MapPin,
-                  text: `Ближайший экипаж уже в ${nearestDistanceKm} км`
+                  text: `Ближайший экипаж уже в ${formatDistance(nearestDistanceKm)} км`
                 },
                 { icon: ShieldCheck, text: "Финальная цена согласуется до выезда" },
                 { icon: Phone, text: "Диспетчер на линии 24/7 без форм и ожидания" }
@@ -704,7 +698,55 @@ export default function Home() {
 
                   <div className="mt-6">
                     <p className="text-sm font-semibold text-white/70">Дополнительные условия</p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-[1.2fr_1fr_1fr]">
+                      <motion.div
+                        whileHover={{ y: -4 }}
+                        className={`rounded-lg border p-4 text-left transition ${
+                          lockedWheels > 0
+                            ? "border-[rgba(97,240,255,0.45)] bg-[rgba(97,240,255,0.12)]"
+                            : "border-white/10 bg-white/6 hover:border-[rgba(255,106,26,0.42)] hover:bg-white/8"
+                        }`}
+                      >
+                        <div className="flex min-h-full flex-col">
+                          <div>
+                            <span className="block text-sm font-semibold">Заблокированы колеса</span>
+                            <span className="mt-1 block text-xs leading-5 text-white/48">
+                              По 500 ₽ за каждое заблокированное колесо
+                            </span>
+                            <span className="mt-3 inline-flex whitespace-nowrap rounded-md bg-black/24 px-2 py-1 text-xs text-[var(--orange)]">
+                              +500 ₽ / колесо
+                            </span>
+                          </div>
+                          <div className="mt-4 flex items-center justify-between gap-3">
+                            <div className="inline-flex items-center rounded-lg border border-white/12 bg-black/22 p-1">
+                              <button
+                                type="button"
+                                onClick={() => setLockedWheels((current) => Math.max(0, current - 1))}
+                                className="grid h-9 w-9 place-items-center rounded-md text-lg text-white/74 transition hover:bg-white/10 hover:text-white"
+                                aria-label="Уменьшить количество заблокированных колес"
+                              >
+                                -
+                              </button>
+                              <span className="min-w-[3.2rem] text-center text-base font-semibold text-white">
+                                {lockedWheels}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setLockedWheels((current) => Math.min(4, current + 1))}
+                                className="grid h-9 w-9 place-items-center rounded-md text-lg text-white/74 transition hover:bg-white/10 hover:text-white"
+                                aria-label="Увеличить количество заблокированных колес"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <span className="text-right text-sm font-semibold text-white/74">
+                              {lockedWheels > 0
+                                ? `+${formatPrice(lockedWheels * lockedWheelPrice)}`
+                                : "Без доплаты"}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
                       {calculatorExtras.map((item) => {
                         const active = selectedExtras.includes(item.id);
 
@@ -723,7 +765,7 @@ export default function Home() {
                           >
                             <div className="flex items-start justify-between gap-3">
                               <span className="block text-sm font-semibold">{item.title}</span>
-                              <span className="rounded-md bg-black/24 px-2 py-1 text-xs text-[var(--orange)]">
+                              <span className="shrink-0 whitespace-nowrap rounded-md bg-black/24 px-2 py-1 text-xs text-[var(--orange)]">
                                 +{formatPrice(item.price)}
                               </span>
                             </div>
@@ -927,29 +969,13 @@ export default function Home() {
             <div>
               <p className="mb-3 text-sm font-semibold text-[var(--cyan)]">Карта покрытия</p>
               <h2 className="text-balance text-4xl font-semibold leading-tight sm:text-5xl">
-                Донецк, районы города и маршруты по ДНР в Google и Яндекс Картах
+                Донецк, районы города и маршруты по ДНР в Яндекс Картах
               </h2>
               <p className="mt-5 text-lg leading-8 text-white/62">
                 Эвакуатор Донецк работает по центральным районам, частному сектору, промзонам,
                 трассам и междугородним направлениям. Адрес и точку подачи достаточно назвать
                 диспетчеру в звонке.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                {(Object.keys(mapProviders) as Array<keyof typeof mapProviders>).map((provider) => (
-                  <button
-                    key={provider}
-                    type="button"
-                    onClick={() => setActiveMap(provider)}
-                    className={`rounded-lg border px-4 py-3 text-sm font-semibold transition ${
-                      activeMap === provider
-                        ? "border-[rgba(255,106,26,0.62)] bg-[rgba(255,106,26,0.14)] text-white"
-                        : "border-white/12 bg-white/6 text-white/68 hover:border-[rgba(97,240,255,0.4)] hover:text-white"
-                    }`}
-                  >
-                    {mapProviders[provider].label}
-                  </button>
-                ))}
-              </div>
               <div className="mt-8 flex flex-wrap gap-2">
                 {["Центр", "Калининский", "Киевский", "Буденновский", "Макеевка", "Горловка", "ДНР"].map(
                   (zone, index) => (
@@ -973,9 +999,8 @@ export default function Home() {
             <div className="glass overflow-hidden rounded-lg p-2">
               <div className="relative min-h-[440px] overflow-hidden rounded-lg border border-white/10 bg-[#141414]">
                 <iframe
-                  key={activeMap}
                   title="Карта Донецка и зона работы эвакуатора"
-                  src={activeMapData.embed}
+                  src={yandexMap.embed}
                   loading="lazy"
                   className="absolute inset-0 h-full w-full border-0 opacity-80 grayscale"
                   allowFullScreen
@@ -997,12 +1022,12 @@ export default function Home() {
                         Онлайн
                       </motion.span>
                       <a
-                        href={activeMapData.href}
+                        href={yandexMap.href}
                         target="_blank"
                         rel="noreferrer"
                         className="pointer-events-auto inline-flex items-center gap-2 rounded-md border border-white/14 bg-white/8 px-3 py-2 text-sm font-semibold text-white transition hover:border-[rgba(97,240,255,0.4)] hover:bg-white/12"
                       >
-                        Открыть карту
+                        Открыть Яндекс.Карты
                         <ArrowRight className="h-4 w-4 text-[var(--cyan)]" aria-hidden="true" />
                       </a>
                     </div>
